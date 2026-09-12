@@ -106,11 +106,13 @@ const makePdfBlob = ({ type, number, customer, contact, date, items, total, logo
   addRect(32, 34, 531, 775, '1 1 1');
   addRect(40, 730, 515, 58, '0.09 0.20 0.06');
   addLine(40, 730, 555, 730, '0.09 0.20 0.06');
+  commands.push('q 0.58 0 0 0.58 56 742 cm /Im1 Do Q');
 
   addText('KAPTAI GENERAL DEALERS', 82, 768, 18, 'F2', '1 1 1');
-  addText('PLOT No: 14', 82, 750, 8, 'F1', '1 1 1');
-  addText('KAMBO FARM BLOCK', 78, 738, 8, 'F1', '1 1 1');
-  addText('Ndola, Zambia', 78, 726, 8, 'F1', '1 1 1');
+  addText('A subsidiary of Kaptai Farms', 82, 750, 8, 'F1', '1 1 1');
+  addText('PLOT No: 14', 82, 738, 8, 'F1', '1 1 1');
+  addText('KAMBO FARM BLOCK', 78, 726, 8, 'F1', '1 1 1');
+  addText('Ndola, Zambia', 78, 714, 8, 'F1', '1 1 1');
   addText('TEL: 0971 662 073', 290, 748, 8, 'F1', '1 1 1');
   addText('Email: kaptaifarms@gmail.com', 290, 736, 8, 'F1', '1 1 1');
   addText(invoiceType, 420, 767, 12, 'F2', '1 1 1');
@@ -118,6 +120,7 @@ const makePdfBlob = ({ type, number, customer, contact, date, items, total, logo
 
   addText('Bill to:', 60, 690, 9, 'F2', '0.15 0.15 0.15');
   addText(customer, 110, 690, 9, 'F1', '0.15 0.15 0.15');
+  addText('Kaptai Farms is a subsidiary of Kaptai General Dealers', 110, 676, 7, 'F1', '0.15 0.15 0.15');
   addText('Customer TIN:', 350, 690, 9, 'F2', '0.15 0.15 0.15');
   addText(contact, 440, 690, 8, 'F1', '0.15 0.15 0.15');
   addText(`Date: ${date}`, 430, 676, 9, 'F1', '0.15 0.15 0.15');
@@ -165,13 +168,15 @@ const makePdfBlob = ({ type, number, customer, contact, date, items, total, logo
   addText('Thank you for choosing Kaptai Farms.', 65, 90, 9, 'F1', '0.4 0.4 0.4');
 
   const stream = `BT ${commands.join(' ')} ET`;
+  const imageStream = logo.rgb;
   const objectBodies = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> /XObject << /Im1 7 0 R >> >> /Contents 4 0 R >>',
     `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>'
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>',
+    `<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Length ${imageStream.length} >>\nstream\n`
   ];
 
   const encoder = new TextEncoder();
@@ -182,8 +187,12 @@ const makePdfBlob = ({ type, number, customer, contact, date, items, total, logo
     chunks.push(encoder.encode(`${index + 1} 0 obj\n${body}\nendobj\n`));
   });
 
+  const imageStart = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  chunks.push(imageStream);
+  chunks.push(encoder.encode('\nendstream\nendobj\n'));
+
   const startXref = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-  chunks.push(encoder.encode(`xref\n0 ${objectBodies.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map((offset) => `${String(offset).padStart(10, '0')} 00000 n `).join('\n')}\ntrailer\n<< /Size ${objectBodies.length + 1} /Root 1 0 R >>\nstartxref\n${startXref}\n%%EOF`));
+  chunks.push(encoder.encode(`xref\n0 ${objectBodies.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map((offset) => `${String(offset).padStart(10, '0')} 00000 n `).join('\n')}\n${String(imageStart).padStart(10, '0')} 00000 n \ntrailer\n<< /Size ${objectBodies.length + 1} /Root 1 0 R >>\nstartxref\n${startXref}\n%%EOF`));
 
   return new Blob([joinBytes(chunks)], { type: 'application/pdf' });
 };
