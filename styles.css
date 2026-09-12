@@ -104,3 +104,4 @@ h2 em { color: var(--green); font-family: var(--serif); font-style: italic; font
 @media (max-width: 760px) { .facebook-post-secondary, .facebook-reel { grid-column: auto; grid-row: auto; } }
 @media (max-width: 760px) { .document-layout { grid-template-columns: 1fr; gap: 40px; padding: 75px 0 80px; }.document-form { padding: 20px 16px; }.document-fields { grid-template-columns: 1fr; }.document-form-top { align-items: flex-start; flex-direction: column; gap: 12px; }.line-item { grid-template-columns: 1fr 1fr 1fr 26px; gap: 7px; }.line-item label:first-child { grid-column: 1 / -1; }.document-actions { align-items: flex-end; }.footer-contact { flex-wrap: wrap; gap: 10px 15px; } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; }.reveal { opacity: 1; transform: none; animation: none; } }
+.segmented-control input { width: 1px; height: 1px; }
