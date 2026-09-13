@@ -105,5 +105,10 @@ h2 em { color: var(--green); font-family: var(--serif); font-style: italic; font
 .admin-layout { display: grid; grid-template-columns: .8fr 1.2fr; gap: 90px; padding: 105px 0 118px; }
 .content-feedback { margin-top: 18px; font-size: 12px; color: var(--green); font-weight: 700; min-height: 18px; }
 .content-feedback.error { color: var(--red); }
+.is-hidden { display: none !important; }
+.admin-form-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.admin-form-heading strong { font-size: 18px; }
+.admin-form-heading span { color: #78806d; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.admin-form-heading .text-button { margin: 0; }
 .document-form textarea { min-height: 120px; resize: vertical; }
 .segmented-control input { width: 1px; height: 1px; }

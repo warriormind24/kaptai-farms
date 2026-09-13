@@ -22,6 +22,7 @@
       <a href="#produce">Products</a>
       <a href="#services">Services</a>
       <a href="#visit">Contact</a>
+      <a href="#upload">Upload</a>
       <a class="nav-cta" href="https://wa.me/260971662073?text=Hello%20Kaptai%20Farms%2C%20I%20would%20like%20to%20order%20produce." target="_blank" rel="noreferrer">Message us <span aria-hidden="true">↗</span></a>
     </nav>
   </header>
@@ -114,9 +115,9 @@
           </div>
         </article>
         <article class="leader-card reveal reveal-delay">
-          <div class="leader-photo"><img src="Leadership team.jpeg" alt="Kaptai Farms leadership team portrait" loading="lazy" /></div>
+          <div class="leader-photo"><img src="co ceo.jpeg" alt="Kaptai Farms Co-CEO portrait" loading="lazy" /></div>
           <div class="leader-copy">
-            <span class="leader-role">Leadership</span>
+            <span class="leader-role">Co-CEO</span>
             <h3>Kaptai Farms</h3>
             <p>“Good farming starts with real relationships, attentive care, and produce that people can trust.”</p>
           </div>
@@ -200,10 +201,18 @@
       </div>
     </section>
 
-    <section class="admin-content-band">
+    <section id="upload" class="admin-content-band">
       <div class="section-shell admin-layout">
         <div class="document-intro reveal"><p class="eyebrow">Add farm content</p><h2>Post new items<br /><em>from the web.</em></h2><p>Use this form to add a produce listing, update a farm note, or publish a quick item to the site and push it to the GitHub repo.</p></div>
-        <form id="content-form" class="document-form reveal reveal-delay">
+        <form id="admin-login-form" class="document-form reveal reveal-delay">
+          <div class="admin-form-heading"><strong>Admin access</strong><span>Private publishing area</span></div>
+          <label>Username<input id="admin-username" type="text" autocomplete="username" required /></label>
+          <label>Password<input id="admin-password" type="password" autocomplete="current-password" required /></label>
+          <button class="button button-primary document-submit" type="submit">Sign in to publish <span aria-hidden="true">→</span></button>
+          <p id="admin-feedback" class="content-feedback" aria-live="polite"></p>
+        </form>
+        <form id="content-form" class="document-form reveal reveal-delay is-hidden">
+          <div class="admin-form-heading"><strong>Admin publishing</strong><button id="admin-logout" class="text-button" type="button">Sign out</button></div>
           <div class="document-fields"><label>Title<input id="content-title" type="text" placeholder="e.g. Fresh tomatoes" required /></label><label>Category<input id="content-category" type="text" placeholder="Produce, Poultry, Farm note" required /></label></div>
           <div class="document-fields"><label>Image name<input id="content-image" type="text" placeholder="fresh-tomatoes.jpg" /></label><label>Price<input id="content-price" type="text" placeholder="ZMW 25.00" /></label></div>
           <label>Status<select id="content-status"><option>Live</option><option>Draft</option><option>Featured</option></select></label>
