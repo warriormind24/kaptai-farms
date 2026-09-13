@@ -204,8 +204,15 @@
     <section id="upload" class="admin-content-band">
       <div class="section-shell admin-layout">
         <div class="document-intro reveal"><p class="eyebrow">Add farm content</p><h2>Post new items<br /><em>from the web.</em></h2><p>Use this form to add a produce listing, update a farm note, or publish a quick item to the site and push it to the GitHub repo.</p></div>
-        <form id="content-form" class="document-form reveal reveal-delay">
-          <div class="admin-form-heading"><strong>Publish content</strong><span>Open upload form</span></div>
+        <form id="admin-login-form" class="document-form reveal reveal-delay">
+          <div class="admin-form-heading"><strong>Admin access</strong><span>Private publishing area</span></div>
+          <label>Username<input id="admin-username" type="text" autocomplete="username" required /></label>
+          <label>Password<input id="admin-password" type="password" autocomplete="current-password" required /></label>
+          <button class="button button-primary document-submit" type="submit">Sign in to publish <span aria-hidden="true">→</span></button>
+          <p id="admin-feedback" class="content-feedback" aria-live="polite"></p>
+        </form>
+        <form id="content-form" class="document-form reveal reveal-delay is-hidden">
+          <div class="admin-form-heading"><strong>Admin publishing</strong><button id="admin-logout" class="text-button" type="button">Sign out</button></div>
           <div class="document-fields"><label>Title<input id="content-title" type="text" placeholder="e.g. Fresh tomatoes" required /></label><label>Category<input id="content-category" type="text" placeholder="Produce, Poultry, Farm note" required /></label></div>
           <div class="document-fields"><label>Image name<input id="content-image" type="text" placeholder="fresh-tomatoes.jpg" /></label><label>Price<input id="content-price" type="text" placeholder="ZMW 25.00" /></label></div>
           <label>Status<select id="content-status"><option>Live</option><option>Draft</option><option>Featured</option></select></label>

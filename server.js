@@ -6,6 +6,9 @@ const { spawn } = require('child_process');
 const rootDir = __dirname;
 const port = process.env.PORT || 3000;
 const dataFile = path.join(rootDir, 'data', 'content.json');
+const adminUsername = process.env.ADMIN_USERNAME;
+const adminPassword = process.env.ADMIN_PASSWORD;
+const sessions = new Set();
 
 const ensureDataFile = () => {
   fs.mkdirSync(path.dirname(dataFile), { recursive: true });
@@ -37,6 +40,22 @@ const sendJson = (res, statusCode, payload) => {
     'Access-Control-Allow-Credentials': 'true'
   });
   res.end(JSON.stringify(payload));
+};
+
+const getCookies = (req) => Object.fromEntries((req.headers.cookie || '').split(';').filter(Boolean).map((cookie) => {
+  const separator = cookie.indexOf('=');
+  return [cookie.slice(0, separator).trim(), decodeURIComponent(cookie.slice(separator + 1).trim())];
+}));
+
+const isAdmin = (req) => {
+  const session = getCookies(req).kaptai_admin;
+  return Boolean(session && sessions.has(session));
+};
+
+const createSession = () => {
+  const session = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  sessions.add(session);
+  return session;
 };
 
 const parseJsonBody = (req) => new Promise((resolve, reject) => {
@@ -138,12 +157,58 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && url.pathname === '/api/login') {
+    try {
+      const body = await parseJsonBody(req);
+      if (!adminUsername || !adminPassword) {
+        sendJson(res, 503, { success: false, error: 'Admin credentials are not configured on the server.' });
+        return;
+      }
+      if (body.username !== adminUsername || body.password !== adminPassword) {
+        sendJson(res, 401, { success: false, error: 'Invalid admin username or password.' });
+        return;
+      }
+
+      const session = createSession();
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Access-Control-Allow-Origin': 'null',
+        'Access-Control-Allow-Credentials': 'true',
+        'Set-Cookie': `kaptai_admin=${encodeURIComponent(session)}; HttpOnly; SameSite=Strict; Path=/`
+      });
+      res.end(JSON.stringify({ success: true }));
+    } catch (error) {
+      sendJson(res, 400, { success: false, error: error.message });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/logout') {
+    sessions.delete(getCookies(req).kaptai_admin);
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Access-Control-Allow-Origin': 'null',
+      'Access-Control-Allow-Credentials': 'true',
+      'Set-Cookie': 'kaptai_admin=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'
+    });
+    res.end(JSON.stringify({ success: true }));
+    return;
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/content') {
+    if (!isAdmin(req)) {
+      sendJson(res, 401, { success: false, error: 'Admin login required.' });
+      return;
+    }
     sendJson(res, 200, readData());
     return;
   }
 
   if (req.method === 'POST' && url.pathname === '/api/content') {
+    if (!isAdmin(req)) {
+      sendJson(res, 401, { success: false, error: 'Admin login required.' });
+      return;
+    }
     try {
       const body = await parseJsonBody(req);
       const entries = readData();
