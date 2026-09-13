@@ -1,5 +1,15 @@
 const menuToggle = document.querySelector('.menu-toggle');
 const siteNav = document.querySelector('#site-nav');
+const apiBase = window.location.protocol === 'file:' ? 'http://localhost:3000' : '';
+
+const readApiResponse = async (response) => {
+  const text = await response.text();
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(response.ok ? 'The server returned an invalid response.' : `Server error (${response.status}). Start the site with node server.js.`);
+  }
+};
 
 menuToggle?.addEventListener('click', () => {
   const isOpen = siteNav.classList.toggle('open');
@@ -215,46 +225,8 @@ documentForm?.addEventListener('submit', async (event) => {
   URL.revokeObjectURL(link.href);
 });
 
-const adminLoginForm = document.querySelector('#admin-login-form');
-const adminFeedback = document.querySelector('#admin-feedback');
-const adminLogout = document.querySelector('#admin-logout');
 const contentForm = document.querySelector('#content-form');
 const contentFeedback = document.querySelector('#content-feedback');
-
-adminLoginForm?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  adminFeedback.textContent = 'Signing in...';
-  adminFeedback.classList.remove('error');
-
-  try {
-    const response = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: document.querySelector('#admin-username').value.trim(),
-        password: document.querySelector('#admin-password').value
-      })
-    });
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || 'Unable to sign in.');
-    }
-
-    adminLoginForm.classList.add('is-hidden');
-    contentForm?.classList.remove('is-hidden');
-    adminLoginForm.reset();
-  } catch (error) {
-    adminFeedback.textContent = error.message;
-    adminFeedback.classList.add('error');
-  }
-});
-
-adminLogout?.addEventListener('click', async () => {
-  await fetch('/api/logout', { method: 'POST' });
-  contentForm?.classList.add('is-hidden');
-  adminLoginForm?.classList.remove('is-hidden');
-  adminFeedback.textContent = 'You have been signed out.';
-});
 
 contentForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -278,15 +250,16 @@ contentForm?.addEventListener('submit', async (event) => {
   contentFeedback.classList.remove('error');
 
   try {
-    const response = await fetch('/api/content', {
+    const response = await fetch(`${apiBase}/api/content`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
+      credentials: 'include',
       body: JSON.stringify(payload)
     });
 
-    const result = await response.json();
+    const result = await readApiResponse(response);
 
     if (!response.ok || result.success === false) {
       throw new Error(result.error || 'Unable to save content');
