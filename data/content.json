@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "title": "Fresh Tomatoes",
+    "category": "Produce",
+    "description": "Farm-picked tomatoes ready for homes, kitchens and local orders.",
+    "image": "fresh-tomatoes.jpg",
+    "price": "ZMW 26.00",
+    "status": "Live",
+    "createdAt": "2026-09-13T00:00:00.000Z"
+  },
+  {
+    "id": 1789309618174,
+    "title": "Verified test item",
+    "category": "Produce",
+    "description": "Auto-verified content submission test",
+    "image": "verified-test.jpg",
+    "price": "ZMW 20.00",
+    "status": "Live",
+    "createdAt": "2026-09-13T14:26:58.174Z"
+  }
+]

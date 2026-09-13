@@ -215,5 +215,52 @@ documentForm?.addEventListener('submit', async (event) => {
   URL.revokeObjectURL(link.href);
 });
 
+const contentForm = document.querySelector('#content-form');
+const contentFeedback = document.querySelector('#content-feedback');
+
+contentForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const payload = {
+    title: document.querySelector('#content-title').value.trim(),
+    category: document.querySelector('#content-category').value.trim(),
+    image: document.querySelector('#content-image').value.trim(),
+    price: document.querySelector('#content-price').value.trim(),
+    status: document.querySelector('#content-status').value,
+    description: document.querySelector('#content-description').value.trim()
+  };
+
+  if (!payload.title || !payload.category) {
+    contentFeedback.textContent = 'Please add a title and category before publishing.';
+    contentFeedback.classList.add('error');
+    return;
+  }
+
+  contentFeedback.textContent = 'Publishing item and pushing to GitHub...';
+  contentFeedback.classList.remove('error');
+
+  try {
+    const response = await fetch('/api/content', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.success === false) {
+      throw new Error(result.error || 'Unable to save content');
+    }
+
+    contentFeedback.textContent = result.message || 'Content saved successfully.';
+    contentForm.reset();
+  } catch (error) {
+    contentFeedback.textContent = error.message || 'There was a problem saving the item.';
+    contentFeedback.classList.add('error');
+  }
+});
+
 updateDocumentNumber();
 updateTotal();
