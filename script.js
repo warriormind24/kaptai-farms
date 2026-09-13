@@ -7,7 +7,7 @@ const readApiResponse = async (response) => {
   try {
     return text ? JSON.parse(text) : {};
   } catch {
-    throw new Error(response.ok ? 'The server returned an invalid response.' : `Server error (${response.status}). Start the site with node server.js.`);
+    throw new Error(response.ok ? 'The server returned an invalid response.' : `Server error (${response.status}). Check the Vercel API configuration.`);
   }
 };
 
@@ -228,8 +228,55 @@ documentForm?.addEventListener('submit', async (event) => {
 const adminLoginForm = document.querySelector('#admin-login-form');
 const adminFeedback = document.querySelector('#admin-feedback');
 const adminLogout = document.querySelector('#admin-logout');
-const contentForm = document.querySelector('#content-form');
-const contentFeedback = document.querySelector('#content-feedback');
+const adminPanel = document.querySelector('#admin-panel');
+const submissionForm = document.querySelector('#submission-form');
+const submissionFeedback = document.querySelector('#submission-feedback');
+const submissionList = document.querySelector('#submission-list');
+const reviewFeedback = document.querySelector('#review-feedback');
+
+const renderSubmissions = (submissions) => {
+  if (!submissions.length) {
+    submissionList.innerHTML = '<p class="empty-submissions">No pending submissions.</p>';
+    return;
+  }
+
+  submissionList.innerHTML = submissions.map((submission) => `<article class="submission-item"><div><strong>${submission.title}</strong><span>${submission.category}${submission.price ? ` · ${submission.price}` : ''}</span><p>${submission.description || 'No description provided.'}</p></div><button class="button button-primary approve-submission" type="button" data-id="${submission.id}">Approve and push</button></article>`).join('');
+};
+
+const loadSubmissions = async () => {
+  const response = await fetch(`${apiBase}/api/submissions`, { credentials: 'include' });
+  const result = await readApiResponse(response);
+  if (!response.ok) throw new Error(result.error || 'Unable to load submissions.');
+  renderSubmissions(result);
+};
+
+submissionForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const payload = {
+    title: document.querySelector('#submission-title').value.trim(),
+    category: document.querySelector('#submission-category').value.trim(),
+    image: document.querySelector('#submission-image').value.trim(),
+    price: document.querySelector('#submission-price').value.trim(),
+    description: document.querySelector('#submission-description').value.trim()
+  };
+
+  submissionFeedback.textContent = 'Sending for review...';
+  submissionFeedback.classList.remove('error');
+  try {
+    const response = await fetch(`${apiBase}/api/submissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await readApiResponse(response);
+    if (!response.ok || !result.success) throw new Error(result.error || 'Unable to send submission.');
+    submissionFeedback.textContent = result.message;
+    submissionForm.reset();
+  } catch (error) {
+    submissionFeedback.textContent = error.message;
+    submissionFeedback.classList.add('error');
+  }
+});
 
 adminLoginForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -249,7 +296,8 @@ adminLoginForm?.addEventListener('submit', async (event) => {
     const result = await readApiResponse(response);
     if (!response.ok || !result.success) throw new Error(result.error || 'Unable to sign in.');
     adminLoginForm.classList.add('is-hidden');
-    contentForm?.classList.remove('is-hidden');
+    adminPanel?.classList.remove('is-hidden');
+    await loadSubmissions();
     adminLoginForm.reset();
   } catch (error) {
     adminFeedback.textContent = error.message;
@@ -259,53 +307,27 @@ adminLoginForm?.addEventListener('submit', async (event) => {
 
 adminLogout?.addEventListener('click', async () => {
   await fetch(`${apiBase}/api/logout`, { method: 'POST', credentials: 'include' });
-  contentForm?.classList.add('is-hidden');
+  adminPanel?.classList.add('is-hidden');
   adminLoginForm?.classList.remove('is-hidden');
   adminFeedback.textContent = 'You have been signed out.';
 });
 
-contentForm?.addEventListener('submit', async (event) => {
-  event.preventDefault();
-
-  const payload = {
-    title: document.querySelector('#content-title').value.trim(),
-    category: document.querySelector('#content-category').value.trim(),
-    image: document.querySelector('#content-image').value.trim(),
-    price: document.querySelector('#content-price').value.trim(),
-    status: document.querySelector('#content-status').value,
-    description: document.querySelector('#content-description').value.trim()
-  };
-
-  if (!payload.title || !payload.category) {
-    contentFeedback.textContent = 'Please add a title and category before publishing.';
-    contentFeedback.classList.add('error');
-    return;
-  }
-
-  contentFeedback.textContent = 'Publishing item and pushing to GitHub...';
-  contentFeedback.classList.remove('error');
-
+submissionList?.addEventListener('click', async (event) => {
+  const button = event.target.closest('.approve-submission');
+  if (!button) return;
+  button.disabled = true;
+  reviewFeedback.textContent = 'Approving and pushing to GitHub...';
+  reviewFeedback.classList.remove('error');
   try {
-    const response = await fetch(`${apiBase}/api/content`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include',
-      body: JSON.stringify(payload)
-    });
-
+    const response = await fetch(`${apiBase}/api/submissions/${button.dataset.id}/approve`, { method: 'POST', credentials: 'include' });
     const result = await readApiResponse(response);
-
-    if (!response.ok || result.success === false) {
-      throw new Error(result.error || 'Unable to save content');
-    }
-
-    contentFeedback.textContent = result.message || 'Content saved successfully.';
-    contentForm.reset();
+    if (!response.ok || !result.success) throw new Error(result.error || 'Unable to approve submission.');
+    reviewFeedback.textContent = result.message;
+    await loadSubmissions();
   } catch (error) {
-    contentFeedback.textContent = error.message || 'There was a problem saving the item.';
-    contentFeedback.classList.add('error');
+    reviewFeedback.textContent = error.message;
+    reviewFeedback.classList.add('error');
+    button.disabled = false;
   }
 });
 

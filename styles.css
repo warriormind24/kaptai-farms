@@ -110,5 +110,12 @@ h2 em { color: var(--green); font-family: var(--serif); font-style: italic; font
 .admin-form-heading strong { font-size: 18px; }
 .admin-form-heading span { color: #78806d; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
 .admin-form-heading .text-button { margin: 0; }
+.submission-list { display: grid; gap: 12px; }
+.submission-item { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px; border: 1px solid #d7dfcb; background: #fff; border-radius: 6px; }
+.submission-item strong, .submission-item span { display: block; }
+.submission-item span { margin-top: 4px; color: #78806d; font-size: 11px; }
+.submission-item p { margin: 8px 0 0; color: #65705b; font-size: 12px; }
+.approve-submission { flex: 0 0 auto; padding: 11px 14px; font-size: 11px; }
+.empty-submissions { margin: 0; color: #78806d; font-size: 13px; }
 .document-form textarea { min-height: 120px; resize: vertical; }
 .segmented-control input { width: 1px; height: 1px; }

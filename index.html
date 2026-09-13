@@ -203,23 +203,23 @@
 
     <section id="upload" class="admin-content-band">
       <div class="section-shell admin-layout">
-        <div class="document-intro reveal"><p class="eyebrow">Add farm content</p><h2>Post new items<br /><em>from the web.</em></h2><p>Use this form to add a produce listing, update a farm note, or publish a quick item to the site and push it to the GitHub repo.</p></div>
+        <div class="document-intro reveal"><p class="eyebrow">Suggest farm content</p><h2>Share an idea<br /><em>with Kaptai.</em></h2><p>Anyone can suggest a produce listing or farm update. Submissions are reviewed by the Kaptai Farms admin before they are published.</p></div>
+        <form id="submission-form" class="document-form reveal reveal-delay">
+          <div class="admin-form-heading"><strong>Send a suggestion</strong><span>No GitHub account needed</span></div>
+          <div class="document-fields"><label>Title<input id="submission-title" type="text" placeholder="e.g. Fresh tomatoes" required /></label><label>Category<input id="submission-category" type="text" placeholder="Produce, Poultry, Farm note" required /></label></div>
+          <div class="document-fields"><label>Image name<input id="submission-image" type="text" placeholder="fresh-tomatoes.jpg" /></label><label>Price<input id="submission-price" type="text" placeholder="ZMW 25.00" /></label></div>
+          <label>Description<textarea id="submission-description" rows="4" placeholder="Add a short description..."></textarea></label>
+          <button class="button button-primary document-submit" type="submit">Send for review <span aria-hidden="true">→</span></button>
+          <p id="submission-feedback" class="content-feedback" aria-live="polite"></p>
+        </form>
         <form id="admin-login-form" class="document-form reveal reveal-delay">
-          <div class="admin-form-heading"><strong>Admin access</strong><span>Private publishing area</span></div>
+          <div class="admin-form-heading"><strong>Admin review</strong><span>Approve submissions</span></div>
           <label>Username<input id="admin-username" type="text" autocomplete="username" required /></label>
           <label>Password<input id="admin-password" type="password" autocomplete="current-password" required /></label>
-          <button class="button button-primary document-submit" type="submit">Sign in to publish <span aria-hidden="true">→</span></button>
+          <button class="button button-primary document-submit" type="submit">Sign in to review <span aria-hidden="true">→</span></button>
           <p id="admin-feedback" class="content-feedback" aria-live="polite"></p>
         </form>
-        <form id="content-form" class="document-form reveal reveal-delay is-hidden">
-          <div class="admin-form-heading"><strong>Admin publishing</strong><button id="admin-logout" class="text-button" type="button">Sign out</button></div>
-          <div class="document-fields"><label>Title<input id="content-title" type="text" placeholder="e.g. Fresh tomatoes" required /></label><label>Category<input id="content-category" type="text" placeholder="Produce, Poultry, Farm note" required /></label></div>
-          <div class="document-fields"><label>Image name<input id="content-image" type="text" placeholder="fresh-tomatoes.jpg" /></label><label>Price<input id="content-price" type="text" placeholder="ZMW 25.00" /></label></div>
-          <label>Status<select id="content-status"><option>Live</option><option>Draft</option><option>Featured</option></select></label>
-          <label>Description<textarea id="content-description" rows="4" placeholder="Add a short product description or farm update..."></textarea></label>
-          <button class="button button-primary document-submit" type="submit">Publish to site and GitHub <span aria-hidden="true">→</span></button>
-          <p id="content-feedback" class="content-feedback" aria-live="polite"></p>
-        </form>
+        <div id="admin-panel" class="document-form reveal reveal-delay is-hidden"><div class="admin-form-heading"><strong>Pending submissions</strong><button id="admin-logout" class="text-button" type="button">Sign out</button></div><div id="submission-list" class="submission-list"></div><p id="review-feedback" class="content-feedback" aria-live="polite"></p></div>
       </div>
     </section>
 

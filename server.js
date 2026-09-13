@@ -6,6 +6,7 @@ const { spawn } = require('child_process');
 const rootDir = __dirname;
 const port = process.env.PORT || 3000;
 const dataFile = path.join(rootDir, 'data', 'content.json');
+const submissionsFile = path.join(rootDir, 'data', 'submissions.json');
 const adminUsername = process.env.ADMIN_USERNAME;
 const adminPassword = process.env.ADMIN_PASSWORD;
 const sessions = new Set();
@@ -14,6 +15,9 @@ const ensureDataFile = () => {
   fs.mkdirSync(path.dirname(dataFile), { recursive: true });
   if (!fs.existsSync(dataFile)) {
     fs.writeFileSync(dataFile, JSON.stringify([], null, 2), 'utf8');
+  }
+  if (!fs.existsSync(submissionsFile)) {
+    fs.writeFileSync(submissionsFile, JSON.stringify([], null, 2), 'utf8');
   }
 };
 
@@ -84,6 +88,15 @@ const readData = () => {
 
 const writeData = (entries) => {
   fs.writeFileSync(dataFile, JSON.stringify(entries, null, 2), 'utf8');
+};
+
+const readSubmissions = () => {
+  const raw = fs.readFileSync(submissionsFile, 'utf8');
+  return JSON.parse(raw || '[]');
+};
+
+const writeSubmissions = (entries) => {
+  fs.writeFileSync(submissionsFile, JSON.stringify(entries, null, 2), 'utf8');
 };
 
 const runGitCommand = (args) => new Promise((resolve, reject) => {
@@ -192,6 +205,73 @@ const server = http.createServer(async (req, res) => {
       'Set-Cookie': 'kaptai_admin=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'
     });
     res.end(JSON.stringify({ success: true }));
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/submissions') {
+    try {
+      const body = await parseJsonBody(req);
+      if (!String(body.title || '').trim() || !String(body.category || '').trim()) {
+        sendJson(res, 400, { success: false, error: 'Title and category are required.' });
+        return;
+      }
+
+      const submissions = readSubmissions();
+      const record = {
+        id: Date.now(),
+        title: String(body.title).trim(),
+        category: String(body.category).trim(),
+        description: String(body.description || '').trim(),
+        image: String(body.image || '').trim(),
+        price: String(body.price || '').trim(),
+        status: 'Pending review',
+        createdAt: new Date().toISOString()
+      };
+      submissions.push(record);
+      writeSubmissions(submissions);
+      sendJson(res, 201, { success: true, message: 'Thanks. Your submission is waiting for admin review.' });
+    } catch (error) {
+      sendJson(res, 400, { success: false, error: error.message });
+    }
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/submissions') {
+    if (!isAdmin(req)) {
+      sendJson(res, 401, { success: false, error: 'Admin login required.' });
+      return;
+    }
+    sendJson(res, 200, readSubmissions());
+    return;
+  }
+
+  const approvalMatch = url.pathname.match(/^\/api\/submissions\/(\d+)\/approve$/);
+  if (req.method === 'POST' && approvalMatch) {
+    if (!isAdmin(req)) {
+      sendJson(res, 401, { success: false, error: 'Admin login required.' });
+      return;
+    }
+    try {
+      const submissionId = Number(approvalMatch[1]);
+      const submissions = readSubmissions();
+      const submissionIndex = submissions.findIndex((item) => item.id === submissionId);
+      if (submissionIndex === -1) {
+        sendJson(res, 404, { success: false, error: 'Submission not found.' });
+        return;
+      }
+
+      const [submission] = submissions.splice(submissionIndex, 1);
+      submission.status = 'Live';
+      submission.approvedAt = new Date().toISOString();
+      const entries = readData();
+      entries.push(submission);
+      writeData(entries);
+      writeSubmissions(submissions);
+      const gitResult = await pushChanges();
+      sendJson(res, 200, { success: true, ...gitResult });
+    } catch (error) {
+      sendJson(res, 400, { success: false, error: error.message });
+    }
     return;
   }
 
