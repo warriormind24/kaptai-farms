@@ -130,3 +130,17 @@ h2 em { color: var(--green); font-family: var(--serif); font-style: italic; font
   .gallery-tile-video { grid-column: 1; min-height: 300px; }
   .gallery-tile-video video { min-height: 300px; }
 }
+
+.media-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  background: var(--deep);
+  color: var(--sun);
+  font-family: var(--serif);
+  font-size: 16px;
+  border-radius: inherit;
+}

@@ -25,6 +25,31 @@ siteNav?.querySelectorAll('a').forEach((link) => {
   });
 });
 
+// Image and video error handling - show fallback on load failure
+document.querySelectorAll('img').forEach((img) => {
+  img.addEventListener('error', () => {
+    img.style.display = 'none';
+    const fallback = document.createElement('div');
+    fallback.className = 'media-fallback';
+    fallback.textContent = 'Image unavailable';
+    fallback.setAttribute('role', 'img');
+    fallback.setAttribute('aria-label', img.alt || 'Image');
+    img.parentNode.insertBefore(fallback, img);
+  });
+});
+
+document.querySelectorAll('video').forEach((video) => {
+  video.addEventListener('error', () => {
+    const fallback = document.createElement('div');
+    fallback.className = 'media-fallback';
+    fallback.textContent = 'Video unavailable';
+    fallback.setAttribute('role', 'img');
+    fallback.setAttribute('aria-label', 'Video');
+    video.parentNode.insertBefore(fallback, video);
+    video.style.display = 'none';
+  });
+});
+
 const documentForm = document.querySelector('#document-form');
 const lineItems = document.querySelector('#line-items');
 const addItemButton = document.querySelector('#add-item');
