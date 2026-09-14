@@ -119,3 +119,14 @@ h2 em { color: var(--green); font-family: var(--serif); font-style: italic; font
 .empty-submissions { margin: 0; color: #78806d; font-size: 13px; }
 .document-form textarea { min-height: 120px; resize: vertical; }
 .segmented-control input { width: 1px; height: 1px; }
+.gallery-tile video { display: block; width: 100%; height: 100%; min-height: 310px; object-fit: cover; object-position: center; background: #10240a; transition: transform .5s ease; }
+.gallery-tile-video { grid-column: span 6; min-height: 425px; }
+.gallery-tile-video video { min-height: 425px; }
+.gallery-tile:hover video { transform: scale(1.02); }
+.tile-play { position: absolute; top: 16px; right: 16px; z-index: 2; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: rgba(247,183,49,.95); box-shadow: 0 6px 16px rgba(0,0,0,.28); pointer-events: none; }
+.tile-play svg { width: 20px; height: 20px; fill: var(--deep); }
+.gallery-tile-video figcaption { padding-right: 52px; }
+@media (max-width: 760px) {
+  .gallery-tile-video { grid-column: 1; min-height: 300px; }
+  .gallery-tile-video video { min-height: 300px; }
+}

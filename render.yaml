@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: kaptai-farms
+    runtime: node
+    buildCommand: ""
+    startCommand: "node server.js"
+    healthCheckPath: /
+    envVars:
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_OWNER
+        value: warriormind24
+      - key: GITHUB_REPO
+        value: kaptai-farms
+      - key: GITHUB_BRANCH
+        value: main

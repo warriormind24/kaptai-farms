@@ -9,7 +9,7 @@ The upload API reads `ADMIN_USERNAME` and `ADMIN_PASSWORD` from server environme
 3. Add repository secrets named `ADMIN_USERNAME` and `ADMIN_PASSWORD`.
 4. Configure the hosting service or deployment workflow to expose those secrets to the running Node server.
 
-GitHub Pages cannot run the content API or provide runtime secrets. Deploy the API with the site on Vercel, then add these Vercel environment variables:
+GitHub Pages cannot run the content API or provide runtime secrets. Deploy this repository as a Render Web Service using `render.yaml`, then add these Render environment variables:
 
 ```text
 ADMIN_USERNAME
@@ -21,6 +21,6 @@ GITHUB_REPO=kaptai-farms
 GITHUB_BRANCH=main
 ```
 
-`GITHUB_TOKEN` should be a fine-grained token limited to this repository with **Contents: Read and write** permission. The Vercel API stores pending submissions and approved content in the repository through the GitHub Contents API.
+`GITHUB_TOKEN` should be a fine-grained token limited to this repository with **Contents: Read and write** permission. The Render API stores pending submissions and approved content in the repository through the GitHub Contents API.
 
 For local development, copy `.env.example` to `.env` and load the values in your shell before starting the server. The `.env` file is ignored by Git.

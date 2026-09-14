@@ -1,7 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const crypto = require('crypto');
 
 const rootDir = __dirname;
 const port = process.env.PORT || 3000;
@@ -9,7 +9,11 @@ const dataFile = path.join(rootDir, 'data', 'content.json');
 const submissionsFile = path.join(rootDir, 'data', 'submissions.json');
 const adminUsername = process.env.ADMIN_USERNAME;
 const adminPassword = process.env.ADMIN_PASSWORD;
-const sessions = new Set();
+const githubOwner = process.env.GITHUB_OWNER || 'warriormind24';
+const githubRepo = process.env.GITHUB_REPO || 'kaptai-farms';
+const githubBranch = process.env.GITHUB_BRANCH || 'main';
+const githubToken = process.env.GITHUB_TOKEN;
+const sessionSecret = process.env.SESSION_SECRET;
 
 const ensureDataFile = () => {
   fs.mkdirSync(path.dirname(dataFile), { recursive: true });
@@ -52,14 +56,16 @@ const getCookies = (req) => Object.fromEntries((req.headers.cookie || '').split(
 }));
 
 const isAdmin = (req) => {
-  const session = getCookies(req).kaptai_admin;
-  return Boolean(session && sessions.has(session));
+  const [timestamp, signature] = (getCookies(req).kaptai_admin || '').split('.');
+  if (!sessionSecret || !timestamp || !signature || Date.now() - Number(timestamp) > 86400000) return false;
+  const expected = crypto.createHmac('sha256', sessionSecret).update(timestamp).digest('hex');
+  return signature === expected;
 };
 
 const createSession = () => {
-  const session = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  sessions.add(session);
-  return session;
+  const timestamp = String(Date.now());
+  const signature = crypto.createHmac('sha256', sessionSecret || '').update(timestamp).digest('hex');
+  return `${timestamp}.${signature}`;
 };
 
 const parseJsonBody = (req) => new Promise((resolve, reject) => {
@@ -81,65 +87,44 @@ const parseJsonBody = (req) => new Promise((resolve, reject) => {
   req.on('error', reject);
 });
 
-const readData = () => {
-  const raw = fs.readFileSync(dataFile, 'utf8');
-  return JSON.parse(raw || '[]');
-};
-
-const writeData = (entries) => {
-  fs.writeFileSync(dataFile, JSON.stringify(entries, null, 2), 'utf8');
-};
-
-const readSubmissions = () => {
-  const raw = fs.readFileSync(submissionsFile, 'utf8');
-  return JSON.parse(raw || '[]');
-};
-
-const writeSubmissions = (entries) => {
-  fs.writeFileSync(submissionsFile, JSON.stringify(entries, null, 2), 'utf8');
-};
-
-const runGitCommand = (args) => new Promise((resolve, reject) => {
-  const child = spawn('git', ['-C', rootDir, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
-  let stdout = '';
-  let stderr = '';
-
-  child.stdout.on('data', (chunk) => {
-    stdout += chunk.toString();
-  });
-
-  child.stderr.on('data', (chunk) => {
-    stderr += chunk.toString();
-  });
-
-  child.on('close', (code) => {
-    if (code === 0) {
-      resolve(stdout.trim());
-      return;
+const githubRequest = async (filePath, options = {}) => {
+  if (!githubToken) throw new Error('GITHUB_TOKEN is not configured on Render.');
+  const response = await fetch(`https://api.github.com/repos/${githubOwner}/${githubRepo}${filePath}`, {
+    ...options,
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${githubToken}`,
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...(options.headers || {})
     }
-
-    reject(new Error(stderr.trim() || `git ${args.join(' ')} failed with code ${code}`));
   });
-});
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.message || `GitHub API error ${response.status}`);
+  return body;
+};
 
-const pushChanges = async () => {
+const readRepoJson = async (filePath) => {
   try {
-    const status = await runGitCommand(['status', '--porcelain']);
-    if (!status.trim()) {
-      return { message: 'No content changes to push.' };
-    }
-
-    await runGitCommand(['add', '.']);
-    await runGitCommand(['commit', '-m', 'Add web content from admin']);
-    await runGitCommand(['push']);
-
-    return { message: 'Content saved and pushed to GitHub.' };
+    const file = await githubRequest(`/contents/${filePath}?ref=${githubBranch}`);
+    return { data: JSON.parse(Buffer.from(file.content, 'base64').toString('utf8')), sha: file.sha };
   } catch (error) {
-    return {
-      message: `Saved locally, but GitHub push was not completed: ${error.message}`,
-      warning: true
-    };
+    if (error.message.includes('Not Found')) return { data: [], sha: undefined };
+    throw error;
   }
+};
+
+const writeRepoJson = async (filePath, data, sha, message) => {
+  const body = {
+    message,
+    content: Buffer.from(`${JSON.stringify(data, null, 2)}\n`).toString('base64'),
+    branch: githubBranch
+  };
+  if (sha) body.sha = sha;
+  await githubRequest(`/contents/${filePath}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
 };
 
 const serveFile = (res, filePath) => {
@@ -197,7 +182,6 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && url.pathname === '/api/logout') {
-    sessions.delete(getCookies(req).kaptai_admin);
     res.writeHead(200, {
       'Content-Type': 'application/json; charset=utf-8',
       'Access-Control-Allow-Origin': 'null',
@@ -216,7 +200,8 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const submissions = readSubmissions();
+      const submissionsFileData = await readRepoJson('data/submissions.json');
+      const submissions = submissionsFileData.data;
       const record = {
         id: Date.now(),
         title: String(body.title).trim(),
@@ -228,7 +213,7 @@ const server = http.createServer(async (req, res) => {
         createdAt: new Date().toISOString()
       };
       submissions.push(record);
-      writeSubmissions(submissions);
+      await writeRepoJson('data/submissions.json', submissions, submissionsFileData.sha, 'Add pending content submission');
       sendJson(res, 201, { success: true, message: 'Thanks. Your submission is waiting for admin review.' });
     } catch (error) {
       sendJson(res, 400, { success: false, error: error.message });
@@ -241,7 +226,7 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 401, { success: false, error: 'Admin login required.' });
       return;
     }
-    sendJson(res, 200, readSubmissions());
+    sendJson(res, 200, (await readRepoJson('data/submissions.json')).data);
     return;
   }
 
@@ -253,7 +238,8 @@ const server = http.createServer(async (req, res) => {
     }
     try {
       const submissionId = Number(approvalMatch[1]);
-      const submissions = readSubmissions();
+      const submissionsFileData = await readRepoJson('data/submissions.json');
+      const submissions = submissionsFileData.data;
       const submissionIndex = submissions.findIndex((item) => item.id === submissionId);
       if (submissionIndex === -1) {
         sendJson(res, 404, { success: false, error: 'Submission not found.' });
@@ -263,12 +249,12 @@ const server = http.createServer(async (req, res) => {
       const [submission] = submissions.splice(submissionIndex, 1);
       submission.status = 'Live';
       submission.approvedAt = new Date().toISOString();
-      const entries = readData();
+      const contentFileData = await readRepoJson('data/content.json');
+      const entries = contentFileData.data;
       entries.push(submission);
-      writeData(entries);
-      writeSubmissions(submissions);
-      const gitResult = await pushChanges();
-      sendJson(res, 200, { success: true, ...gitResult });
+      await writeRepoJson('data/content.json', entries, contentFileData.sha, 'Publish approved web content');
+      await writeRepoJson('data/submissions.json', submissions, submissionsFileData.sha, 'Remove approved content submission');
+      sendJson(res, 200, { success: true, message: 'Content approved and pushed to GitHub.' });
     } catch (error) {
       sendJson(res, 400, { success: false, error: error.message });
     }
@@ -280,7 +266,7 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 401, { success: false, error: 'Admin login required.' });
       return;
     }
-    sendJson(res, 200, readData());
+    sendJson(res, 200, (await readRepoJson('data/content.json')).data);
     return;
   }
 
@@ -291,7 +277,8 @@ const server = http.createServer(async (req, res) => {
     }
     try {
       const body = await parseJsonBody(req);
-      const entries = readData();
+      const contentFileData = await readRepoJson('data/content.json');
+      const entries = contentFileData.data;
       const record = {
         id: Date.now(),
         title: String(body.title || 'New item').trim(),
@@ -304,13 +291,11 @@ const server = http.createServer(async (req, res) => {
       };
 
       entries.push(record);
-      writeData(entries);
-
-      const gitResult = await pushChanges();
+      await writeRepoJson('data/content.json', entries, contentFileData.sha, 'Add web content from admin');
       sendJson(res, 200, {
         success: true,
         item: record,
-        ...gitResult
+        message: 'Content saved and pushed to GitHub.'
       });
     } catch (error) {
       sendJson(res, 400, { success: false, error: error.message });
