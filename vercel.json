@@ -1,8 +1,11 @@
 {
   "version": 2,
-  "functions": {
-    "api/[...path].js": {
-      "runtime": "nodejs@20.x"
-    }
-  }
+  "builds": [
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "api/[...path].js", "use": "@vercel/node@20" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/[...path].js" },
+    { "src": "/(.*)", "dest": "/$1" }
+  ]
 }
