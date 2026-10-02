@@ -314,15 +314,22 @@ documentForm?.addEventListener('submit', (event) => {
 </html>`;
 
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const downloadUrl = URL.createObjectURL(blob);
-  const downloadLink = document.createElement('a');
   const downloadPrefix = selectedType === 'Quotation' ? 'quo' : 'inv';
-  downloadLink.href = downloadUrl;
-  downloadLink.download = `${downloadPrefix}-${String(invoiceCounter).padStart(4, '0')}.html`;
-  document.body.appendChild(downloadLink);
-  downloadLink.click();
-  downloadLink.remove();
-  setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+  const filename = `${downloadPrefix}-${String(invoiceCounter).padStart(4, '0')}.html`;
+  const documentFile = new File([blob], filename, { type: 'text/html' });
+
+  if (navigator.canShare?.({ files: [documentFile] }) && navigator.share) {
+    navigator.share({ files: [documentFile], title: `${selectedType} | Kaptai Farms` });
+  } else {
+    const downloadUrl = URL.createObjectURL(blob);
+    const downloadLink = document.createElement('a');
+    downloadLink.href = downloadUrl;
+    downloadLink.download = filename;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+  }
 
   invoiceCounter += 1;
   updateDocumentNumber();
