@@ -17,27 +17,22 @@ test('invoice form downloads a document', async ({ page }) => {
   expect(download.suggestedFilename()).toContain('inv-');
 });
 
-test('invoice form shares a downloadable file on devices that support file sharing', async ({ page }) => {
+test('invoice form downloads directly even when file sharing is available', async ({ page }) => {
   await page.addInitScript(() => {
-    window.sharedFiles = [];
+    window.shareCalled = false;
     Object.defineProperty(navigator, 'canShare', { value: () => true });
     Object.defineProperty(navigator, 'share', {
-      value: async ({ files }) => window.sharedFiles.push(...files),
+      value: async () => { window.shareCalled = true; },
     });
   });
   await page.goto(indexUrl);
   await page.locator('#customer-name').fill('Jane Smith');
   await page.locator('#customer-contact').fill('jane@example.com');
   await page.locator('#document-form .price-input').fill('25.00');
+  const downloadPromise = page.waitForEvent('download');
   await page.locator('#document-form button[type="submit"]').click();
 
-  const sharedFile = await page.evaluate(async () => {
-    const [file] = window.sharedFiles;
-    return { name: file?.name, type: file?.type, contents: await file?.text() };
-  });
-
-  expect(sharedFile.name).toBe('inv-0001.html');
-  expect(sharedFile.type).toBe('text/html');
-  expect(sharedFile.contents).toContain('Jane Smith');
-  expect(sharedFile.contents).toContain('25.00');
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('inv-0001.html');
+  expect(await page.evaluate(() => window.shareCalled)).toBe(false);
 });
