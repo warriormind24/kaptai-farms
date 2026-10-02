@@ -171,159 +171,97 @@ documentForm?.addEventListener('submit', (event) => {
     year: 'numeric',
   });
 
-  const documentBody = rows.map((row) => `
-    <tr>
-      <td>${escapeHtml(row.product)}</td>
-      <td>${row.quantity}</td>
-      <td>${formatMoney(row.unitPrice)}</td>
-      <td>${formatMoney(row.lineTotal)}</td>
-    </tr>
-  `).join('');
+  if (!window.jspdf?.jsPDF) {
+    window.alert('PDF creation is unavailable. Please check your internet connection and try again.');
+    return;
+  }
 
-  const html = `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>${selectedType} | Kaptai Farms</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        color: #1e2a1d;
-        background: #f6f5f1;
-        margin: 0;
-        padding: 32px;
-      }
-      .document {
-        max-width: 820px;
-        margin: 0 auto;
-        background: #fff;
-        border: 1px solid #dfe7de;
-        border-radius: 12px;
-        padding: 32px;
-        box-shadow: 0 18px 40px rgba(17, 24, 39, 0.08);
-      }
-      .header {
-        display: flex;
-        justify-content: space-between;
-        gap: 16px;
-        align-items: start;
-        border-bottom: 2px solid #e5e8d7;
-        padding-bottom: 18px;
-        margin-bottom: 24px;
-      }
-      h1 {
-        margin: 6px 0 0;
-        font-size: 32px;
-      }
-      .meta {
-        text-align: right;
-        font-size: 14px;
-        line-height: 1.8;
-      }
-      .customer {
-        margin-bottom: 24px;
-        padding: 18px;
-        background: #f8faf6;
-        border-radius: 10px;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-      }
-      th, td {
-        text-align: left;
-        padding: 12px 10px;
-        border-bottom: 1px solid #edf1eb;
-      }
-      th {
-        background: #eef6ed;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-      }
-      .totals {
-        margin-left: auto;
-        width: 280px;
-        border-top: 2px solid #d3d9c7;
-        padding-top: 16px;
-      }
-      .totals-row {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 8px;
-        font-size: 14px;
-      }
-      .totals-row strong {
-        font-size: 18px;
-      }
-      .footer {
-        margin-top: 36px;
-        font-size: 12px;
-        color: #5d685a;
-        border-top: 1px solid #edf1eb;
-        padding-top: 16px;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="document">
-      <div class="header">
-        <div>
-          <div style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #64815f; font-weight: 700;">Kaptai Farms</div>
-          <h1>${selectedType}</h1>
-        </div>
-        <div class="meta">
-          <div><strong>${selectedType === 'Quotation' ? 'QUOTATION' : 'INVOICE'} NO:</strong> ${escapeHtml(documentNumber?.textContent || 'INV-0001')}</div>
-          <div><strong>Date:</strong> ${issuedDate}</div>
-        </div>
-      </div>
+  const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 16;
+  const contentWidth = pageWidth - (margin * 2);
+  const invoiceId = documentNumber?.textContent || 'INV-0001';
+  const cleanMoney = (amount) => formatMoney(amount).replace(/\s+/g, ' ');
 
-      <div class="customer">
-        <div><strong>Customer:</strong> ${escapeHtml(customerName)}</div>
-        <div><strong>Contact:</strong> ${escapeHtml(customerContact)}</div>
-      </div>
+  pdf.setTextColor(68, 104, 60);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('KAPTAI FARMS', margin, 18);
+  pdf.setTextColor(30, 42, 29);
+  pdf.setFontSize(24);
+  pdf.text(selectedType.toUpperCase(), margin, 30);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(10);
+  pdf.text(`${selectedType === 'Quotation' ? 'QUOTATION' : 'INVOICE'} NO: ${invoiceId}`, margin, 38);
+  pdf.text(`Date: ${issuedDate}`, pageWidth - margin, 38, { align: 'right' });
+  pdf.setDrawColor(210, 220, 203);
+  pdf.line(margin, 44, pageWidth - margin, 44);
 
-      <table>
-        <thead>
-          <tr>
-            <th>Product</th>
-            <th>Qty</th>
-            <th>Unit price</th>
-            <th>Line total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${documentBody}
-        </tbody>
-      </table>
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Customer', margin, 54);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(pdf.splitTextToSize(customerName, contentWidth), margin, 60);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Contact', margin, 70);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(pdf.splitTextToSize(customerContact, contentWidth), margin, 76);
 
-      <div class="totals">
-        <div class="totals-row">
-          <span>Total</span>
-          <strong>${formatMoney(total)}</strong>
-        </div>
-      </div>
+  const columns = { product: margin, quantity: 112, unitPrice: 137, lineTotal: pageWidth - margin };
+  let cursorY = 90;
+  const drawTableHeader = () => {
+    pdf.setFillColor(238, 246, 237);
+    pdf.rect(margin, cursorY - 6, contentWidth, 10, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    pdf.text('PRODUCT', columns.product + 2, cursorY);
+    pdf.text('QTY', columns.quantity, cursorY, { align: 'right' });
+    pdf.text('UNIT PRICE', columns.unitPrice, cursorY, { align: 'right' });
+    pdf.text('LINE TOTAL', columns.lineTotal - 2, cursorY, { align: 'right' });
+    pdf.setFont('helvetica', 'normal');
+    cursorY += 10;
+  };
 
-      <div class="footer">
-        Thank you for your business. For current stock and delivery updates, contact Kaptai Farms on WhatsApp: +260 971 662 073.
-      </div>
-    </div>
-  </body>
-</html>`;
+  drawTableHeader();
+  rows.forEach((row) => {
+    const productLines = pdf.splitTextToSize(row.product, 82);
+    const rowHeight = Math.max(8, productLines.length * 5 + 3);
+    if (cursorY + rowHeight > pageHeight - margin - 28) {
+      pdf.addPage();
+      cursorY = margin + 8;
+      drawTableHeader();
+    }
+    pdf.text(productLines, columns.product + 2, cursorY);
+    pdf.text(String(row.quantity), columns.quantity, cursorY, { align: 'right' });
+    pdf.text(cleanMoney(row.unitPrice), columns.unitPrice, cursorY, { align: 'right' });
+    pdf.text(cleanMoney(row.lineTotal), columns.lineTotal - 2, cursorY, { align: 'right' });
+    cursorY += rowHeight;
+    pdf.setDrawColor(230, 235, 227);
+    pdf.line(margin, cursorY - 2, pageWidth - margin, cursorY - 2);
+  });
 
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  if (cursorY + 30 > pageHeight - margin) {
+    pdf.addPage();
+    cursorY = margin + 8;
+  }
+  cursorY += 5;
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(13);
+  pdf.text(`Total: ${cleanMoney(total)}`, pageWidth - margin, cursorY, { align: 'right' });
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  pdf.setTextColor(93, 104, 90);
+  const footer = 'Thank you for your business. For current stock and delivery updates, contact Kaptai Farms on WhatsApp: +260 971 662 073.';
+  const footerLines = pdf.splitTextToSize(footer, contentWidth);
+  if (cursorY + 12 + (footerLines.length * 4) > pageHeight - margin) {
+    pdf.addPage();
+    cursorY = margin + 8;
+  }
+  pdf.text(footerLines, margin, cursorY + 12);
+
   const downloadPrefix = selectedType === 'Quotation' ? 'quo' : 'inv';
-  const filename = `${downloadPrefix}-${String(invoiceCounter).padStart(4, '0')}.html`;
-  const downloadUrl = URL.createObjectURL(blob);
-  const downloadLink = document.createElement('a');
-  downloadLink.href = downloadUrl;
-  downloadLink.download = filename;
-  document.body.appendChild(downloadLink);
-  downloadLink.click();
-  downloadLink.remove();
-  setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+  const filename = `${downloadPrefix}-${String(invoiceCounter).padStart(4, '0')}.pdf`;
+  pdf.save(filename);
 
   invoiceCounter += 1;
   updateDocumentNumber();
