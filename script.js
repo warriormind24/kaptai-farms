@@ -109,6 +109,7 @@ function addDocumentLineItem() {
         <option>Vegetables</option>
         <option>Chickens</option>
         <option>Tomatoes</option>
+        <option>Fresh green peppers</option>
       </select>
     </label>
     <label>Qty
